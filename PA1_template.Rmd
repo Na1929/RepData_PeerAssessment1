@@ -8,18 +8,116 @@ output:
 
 ## Loading and preprocessing the data
 
-
+```{r}
+dat <- read.csv("activity.csv")
+```
+#Converting variables into date-class and numeric-class
+```{r}
+dat$date <- as.Date(dat$date, "%Y-%m-%d")
+dat$interval <- as.numeric(dat$interval)
+dat$steps <- as.numeric(as.character(dat$steps))
+```
 
 ## What is mean total number of steps taken per day?
-
-
-
+```{r}
+library(dplyr)
+sumd <- dat %>%
+        group_by(date) %>%
+        summarise(sum = sum(steps, na.rm = TRUE))
+head(sumd)
+```
+# Making a histogram for total numbers per day
+```{r}
+library(ggplot2)
+ggplot(sumd, aes(x=date, y=sum)) + 
+        geom_bar(stat = "identity", colour = "white") +
+        labs(x = "Date", y = "Total numbers of steps", title = "Total numbers per day")
+```
+#Calculate the mean and meadian of the total number of steps per day
+```{r}
+mean(sumd$sum)
+median(sumd$sum)
+```
 ## What is the average daily activity pattern?
 
-
+```{r}
+meand <- dat %>%
+        group_by(interval) %>%
+        summarise(mean = mean(steps, na.rm = TRUE))
+head(meand)
+```
+#Time series plot of the average number of steps
+```{r}
+ggplot(meand, aes(x=interval, y=mean)) + 
+        geom_line(stat = "identity", colour = "black") +
+        labs(x = "Interval", y = "Average numbers of steps", title = "Time series plot of the average number of steps")
+```
+#Which 5-minute interval contains the maximum number of steps?
+```{r}
+meand[max(meand$mean),]
+```
 
 ## Imputing missing values
+1. Calculate the total number of NAs
+```{r}
+nrow(subset(dat, is.na(dat$steps)))
+```
+2. Replace NAs with the mean value of the corresponding intervals
+```{r}
+library(dplyr)
+dat_mean <- dat %>%
+        group_by(interval) %>%
+        mutate(steps.mean = ifelse(is.na(steps), mean(steps, na.rm = TRUE), steps))
 
+head(dat_mean)
+```
+Replace with the medians
+```{r}
+dat_med <- dat %>%
+        group_by(interval) %>%
+        mutate(steps.median = ifelse(is.na(steps), median(steps, na.rm = TRUE), steps))
 
+head(dat_med)
+```
+Make 3 plots for comparison
+```{r}
+par(mfrow = c(3,1)) #Set the window
+plot(steps ~ date, data = dat, type = "l", xlab = "", ylab = "", main = "Original") #Plot for the original data with NAs
+plot(steps.mean ~ date, data = dat_mean, type = "l", xlab = "", ylab = "", main = "Replaced with the mean") #Plot for the data, where the NAs are replaced with the mean values
+plot(steps.median ~ date, data = dat_med, type = "l", xlab = "", ylab = "", main = "Replaced with the median") #Plot for the data, where the NAs are replaced with the median values
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+#Using the data with NAs replaced with the mean
+Sys.setlocale("LC_TIME","en_US")
+dat_w <- dat_mean %>%
+        mutate(week = ifelse(weekdays(date, abbreviate = FALSE) == "Saturday", "weekend", ifelse(weekdays(date, abbreviate = FALSE) == "Sunday", "weekend","weekday")))
+```
+Mean over the weekdays
+```{r}
+wd <- subset(dat_w, week == "weekday")
+wd <- select(wd, steps.mean, week, interval)
+wd_av <- wd %>%
+        group_by(interval) %>%
+        mutate(mean = mean(steps.mean, na.rm = TRUE))
+
+#wd_av <- data.frame(mean = wd_av$mean, interval = wd_av$interval)
+```
+Mean over the weekend
+```{r}
+we <- subset(dat_w, week == "weekend")
+we <- select(we, steps.mean, week, interval)
+we_av <- we %>%
+        group_by(interval) %>%
+        mutate(mean = mean(steps.mean, na.rm = TRUE))
+```
+Make 2 plots: average over weekdays/weekend
+```{r}
+weekdata <- rbind(wd_av, we_av)
+ #Set the window
+g <- ggplot(weekdata, aes(x = interval, y = mean))
+g + geom_line() + ylim(0,200) + facet_grid(.~week)
+```
+
