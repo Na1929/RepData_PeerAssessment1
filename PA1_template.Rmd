@@ -1,5 +1,6 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
+author: Natsuno Aoki
 output: 
   html_document:
     keep_md: true
@@ -7,11 +8,11 @@ output:
 
 
 ## Loading and preprocessing the data
-
+# 1. Load the data
 ```{r}
 dat <- read.csv("activity.csv")
 ```
-#Converting variables into date-class and numeric-class
+# 2. Converting variables into date-class and numeric-class
 ```{r}
 dat$date <- as.Date(dat$date, "%Y-%m-%d")
 dat$interval <- as.numeric(dat$interval)
@@ -19,73 +20,138 @@ dat$steps <- as.numeric(as.character(dat$steps))
 ```
 
 ## What is mean total number of steps taken per day?
+# 1. Calculate the total number per date
 ```{r}
+library(plyr)
 library(dplyr)
 sumd <- dat %>%
         group_by(date) %>%
-        summarise(sum = sum(steps, na.rm = TRUE))
-head(sumd)
+        summarise(total = sum(steps, na.rm = TRUE))
+head(sumd, type = "html")
 ```
-# Making a histogram for total numbers per day
+# 2. Make a histogram for total numbers per day
 ```{r}
 library(ggplot2)
-ggplot(sumd, aes(x=date, y=sum)) + 
-        geom_bar(stat = "identity", colour = "white") +
+ggplot(sumd, aes(x=date, y=total)) + 
+        geom_bar(stat = "identity") +
         labs(x = "Date", y = "Total numbers of steps", title = "Total numbers per day")
 ```
-#Calculate the mean and meadian of the total number of steps per day
+
+# 3. Calculate the mean and meadian of the total number of steps per day
+ - mean
 ```{r}
-mean(sumd$sum)
-median(sumd$sum)
+mean(sumd$total)
+```
+ - median
+```{r}
+median(sumd$total)
 ```
 ## What is the average daily activity pattern?
-
+# 1. Make a time series plot
+ - Prepare the mean data per interval
 ```{r}
+detach(package:plyr)
 meand <- dat %>%
         group_by(interval) %>%
         summarise(mean = mean(steps, na.rm = TRUE))
-head(meand)
+head(meand, type = "html")
 ```
-#Time series plot of the average number of steps
+ - Time series plot of the average number of steps
 ```{r}
 ggplot(meand, aes(x=interval, y=mean)) + 
-        geom_line(stat = "identity", colour = "black") +
+        geom_line(stat = "identity") +
         labs(x = "Interval", y = "Average numbers of steps", title = "Time series plot of the average number of steps")
 ```
-#Which 5-minute interval contains the maximum number of steps?
+
+# 2. Which 5-minute interval contains the maximum number of steps?
 ```{r}
-meand[max(meand$mean),]
+md <- meand[max(meand$mean),]
 ```
 
 ## Imputing missing values
-1. Calculate the total number of NAs
+# 1. Calculate the total number of rows with NAs
 ```{r}
 nrow(subset(dat, is.na(dat$steps)))
 ```
-2. Replace NAs with the mean value of the corresponding intervals
+# 2-3. Replace NAs with the mean value of the corresponding intervals
+ - If there is a NA in the column "steps", replace it with the mean value. Otherwise, remain the original value in the steps.
 ```{r}
-library(dplyr)
 dat_mean <- dat %>%
         group_by(interval) %>%
         mutate(steps.mean = ifelse(is.na(steps), mean(steps, na.rm = TRUE), steps))
 
-head(dat_mean)
+head(dat_mean, type = "html")
 ```
-Replace with the medians
+ - In the case of replacing NAs with the medians
 ```{r}
 dat_med <- dat %>%
         group_by(interval) %>%
         mutate(steps.median = ifelse(is.na(steps), median(steps, na.rm = TRUE), steps))
 
-head(dat_med)
+head(dat_med, type = "html")
 ```
-Make 3 plots for comparison
+4. Make a histogram of the total number per day
+ - Prepare the total data using the filled-in dataset with the median
 ```{r}
-par(mfrow = c(3,1)) #Set the window
-plot(steps ~ date, data = dat, type = "l", xlab = "", ylab = "", main = "Original") #Plot for the original data with NAs
-plot(steps.mean ~ date, data = dat_mean, type = "l", xlab = "", ylab = "", main = "Replaced with the mean") #Plot for the data, where the NAs are replaced with the mean values
-plot(steps.median ~ date, data = dat_med, type = "l", xlab = "", ylab = "", main = "Replaced with the median") #Plot for the data, where the NAs are replaced with the median values
+sum_dat_med <- dat_med %>%
+        group_by(date) %>%
+        summarise(total = sum(steps.median, na.rm = TRUE))
+
+head(sum_dat_med)
 ```
+
+- Using the filled-in dataset with the median
+```{r}
+sum_dat_mean <- dat_mean %>%
+        group_by(date) %>%
+        summarise(total = sum(steps.mean, na.rm = TRUE))
+
+head(sum_dat_mean)
+```
+
+ - Make a histogram
+```{r}
+ggplot(sum_dat_med, aes(x=date, y=total)) + 
+        geom_bar(stat = "identity", colour = "white") +
+        labs(x = "Date", y = "Total numbers of steps", title = "Total numbers per day")
+```
+
+3 plots for comparison
+```{r}
+#Make a new column for distincting original data/filled-in data
+sumd$filled <- c("original")
+sum_dat_med$filled <- c("median")
+sum_dat_mean$filled <- c("mean")
+alld <- rbind(sumd, sum_dat_med, sum_dat_mean)
+
+g <- ggplot(alld, aes(x = date, y = total))
+g + geom_line(aes(colour = filled)) + labs(x = "Date", y = "Total of steps", title = "Comparison of the original data with NA / without NA")
+```
+
+ - The mean total number of steps per day, using the filled-in data
+```{r}
+#Original data
+mean(sumd$total)
+
+#NA-filled with the median
+mean(dat_med$steps.median)
+
+#NA-filled with the mean
+mean(dat_mean$steps.mean)
+```
+
+ - The median total number of steps per day, using the filled-in data
+```{r}
+#Original data
+median(sumd$total)
+
+#NA-filled with the median
+median(dat_med$steps.median)
+
+#NA-filled with the mean
+median(dat_mean$steps.mean)
+```
+
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
@@ -95,7 +161,8 @@ Sys.setlocale("LC_TIME","en_US")
 dat_w <- dat_mean %>%
         mutate(week = ifelse(weekdays(date, abbreviate = FALSE) == "Saturday", "weekend", ifelse(weekdays(date, abbreviate = FALSE) == "Sunday", "weekend","weekday")))
 ```
-Mean over the weekdays
+
+ - Mean over the weekdays
 ```{r}
 wd <- subset(dat_w, week == "weekday")
 wd <- select(wd, steps.mean, week, interval)
@@ -103,17 +170,21 @@ wd_av <- wd %>%
         group_by(interval) %>%
         mutate(mean = mean(steps.mean, na.rm = TRUE))
 
-#wd_av <- data.frame(mean = wd_av$mean, interval = wd_av$interval)
+head(wd_av)
 ```
-Mean over the weekend
+ 
+ - Mean over the weekend
 ```{r}
 we <- subset(dat_w, week == "weekend")
 we <- select(we, steps.mean, week, interval)
 we_av <- we %>%
         group_by(interval) %>%
         mutate(mean = mean(steps.mean, na.rm = TRUE))
+
+head(we_av)
 ```
-Make 2 plots: average over weekdays/weekend
+ 
+ - Make 2 plots: average over weekdays/weekend
 ```{r}
 weekdata <- rbind(wd_av, we_av)
  #Set the window
