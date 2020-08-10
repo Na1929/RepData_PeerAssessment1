@@ -66,6 +66,7 @@ ggplot(meand, aes(x=interval, y=mean)) +
 # 2. Which 5-minute interval contains the maximum number of steps?
 ```{r}
 md <- meand[max(meand$mean),]
+md
 ```
 
 ## Imputing missing values
@@ -191,4 +192,3 @@ weekdata <- rbind(wd_av, we_av)
 g <- ggplot(weekdata, aes(x = interval, y = mean))
 g + geom_line() + ylim(0,200) + facet_grid(.~week)
 ```
-
