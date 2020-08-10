@@ -467,7 +467,8 @@ head(meand, type = &quot;html&quot;)</code></pre>
 </div>
 <div id="which-5-minute-interval-contains-the-maximum-number-of-steps" class="section level1">
 <h1>2. Which 5-minute interval contains the maximum number of steps?</h1>
-<pre class="r"><code>md &lt;- meand[max(meand$mean),]</code></pre>
+<pre class="r"><code>meand$interval[meand$mean == max(meand$mean)]</code></pre>
+<pre><code>## [1] 835</code></pre>
 <div id="imputing-missing-values" class="section level2">
 <h2>Imputing missing values</h2>
 </div>

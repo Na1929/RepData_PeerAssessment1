@@ -65,8 +65,8 @@ ggplot(meand, aes(x=interval, y=mean)) +
 
 # 2. Which 5-minute interval contains the maximum number of steps?
 ```{r}
-md <- meand[max(meand$mean),]
-md
+meand$interval[meand$mean == max(meand$mean)]
+
 ```
 
 ## Imputing missing values
